@@ -113,7 +113,7 @@ class Daemon(object):
         # Try killing the daemon process.
         try:
             # Safely signal the daemon to cleanly exit.
-            for retry in xrange(self.safe_quit_tries):
+            for retry in range(self.safe_quit_tries):
                 os.kill(pid, self.killsig)
                 time.sleep(self.kill_was_secs)
             # If for some reason it's ignoring us, then forcifully terminate it.

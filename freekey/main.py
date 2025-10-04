@@ -1,15 +1,15 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 """
 2012.5.26 CKS
 Monitors and responds to key presses.
 """
 from __future__ import print_function
 
-import commands
 import os
 import re
 import sys
 import time
+import subprocess
 
 try:
     from Xlib.display import Display
@@ -22,12 +22,11 @@ except ImportError as e:
     print('='*80, file=sys.stderr)
     sys.exit(1)
 
-from pyxhook import HookManager
+from freekey.pyxhook import HookManager
 
-from daemon import Daemon
+from freekey.daemon import Daemon
 
-VERSION = (0, 1, 3)
-__version__ = '.'.join(map(str, VERSION))
+__version__ = '0.1.3'
 
 ACTIONS = (
     INSTALL,
@@ -59,6 +58,7 @@ class FreeKey(Daemon):
         conf=DEFAULT_CONF,
         ctrl_c_kill=False,
         verbose=False,
+        winname=False,
         *args, **kwargs):
 
         super(FreeKey, self).__init__(*args, **kwargs)
@@ -70,6 +70,7 @@ class FreeKey(Daemon):
         self.altgr_down = False
         self.ctrl_c_kill = ctrl_c_kill
         self.verbose = verbose
+        self.winname = winname
 
         # Process configuration file.
         assert os.path.isfile(conf), 'Configuration file %s not found.'
@@ -86,7 +87,7 @@ class FreeKey(Daemon):
                 continue
             scancode = parts[0]
 
-            if not re.match('(ctrl_)?(super_)?(shift_)?(alt_)?(altgr_)?\d+', scancode):
+            if not re.match(r'(ctrl_)?(super_)?(shift_)?(alt_)?(altgr_)?\d+', scancode):
                 print('Malformed scan code: %i' % i)
                 continue
 
@@ -97,6 +98,13 @@ class FreeKey(Daemon):
     def print(self, *args):
         if self.verbose:
             print(*args)
+
+    def isTargetWindow(self):
+        if not self.winname:
+            return True
+        else:
+            activeWinName =  subprocess.check_output(['xdotool', 'getwindowfocus', 'getwindowname'])
+            return re.match('^' + self.winname + '$', activeWinName)
 
     def handle_keydown(self, event):
         if event.Key in ["Control_R", "Control_L",]:
@@ -125,7 +133,7 @@ class FreeKey(Daemon):
             print("key down", key)
 
         command = self.event_to_command.get(key)
-        if command:
+        if command and self.isTargetWindow():
             print('Running: %s' % command)
             os.system(command)
 
@@ -168,7 +176,7 @@ def write_default_conf(fn):
 171 gnome-screensaver-command -q | grep "is active" && bash -c '/usr/bin/pactl -- suspend-sink `pacmd list-sinks | grep -P -o "(?<=\* index: )[0-9]+"` `pacmd list-sinks | grep -P -o "state: RUNNING" | wc -l`'
 #
 # Add own key mappings
-# [ctrl_][shift_][alt_][altgr_]keycode command
+# [ctrl_][shift_][alt_][win_][altgr_]keycode command
 """)
 
 def echo_keypresses():
@@ -227,7 +235,7 @@ def uninstall_profile_daemon():
     print('Removing %s...' % DEFAULT_PROFILE_SCRIPT)
     os.remove(DEFAULT_PROFILE_SCRIPT)
 
-if __name__ == "__main__":
+def main():
     from optparse import OptionParser
     usage = """usage: %%prog [options] <%s>
 
@@ -260,6 +268,12 @@ Actions:
         dest="conf",
         default=DEFAULT_CONF,
         help="Location of the configuration file.")
+
+    parser.add_option(
+        "--win",
+        dest="winname",
+        default=False,
+        help="Regex to match against active window title.")
 
     parser.add_option(
         "-v",
@@ -297,3 +311,6 @@ Actions:
         #uninstall_symlink()
         uninstall_profile_daemon()
     sys.exit(0)
+    
+if __name__ == "__main__":
+	main()

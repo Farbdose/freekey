@@ -1,31 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
-#from distutils.core import setup
+import re
 from setuptools import setup, find_packages
-from setuptools.command.install import install as _install
 
-from freekey import freekey
-
-class install(_install):
-    def run(self):
-        _install.run(self)
-        
-        # Install bin.
-        bin_src_fqfn = '%s/freekey/freekey.py' % (self.install_libbase,)
-        bin_dst_fqfn = '%s/freekey' % (self.install_scripts,)
-        print 'writing %s' % bin_dst_fqfn
-        os.chmod(bin_src_fqfn, 0755)
-        if os.path.isfile(bin_src_fqfn+'c'):
-            os.chmod(bin_src_fqfn+'c', 0755)
-        if os.path.isfile(bin_dst_fqfn):
-            os.remove(bin_dst_fqfn)
-        os.symlink(bin_src_fqfn, bin_dst_fqfn)
-        #os.chmod(bin_dst_fqfn, 755)
+def get_version():
+    here = os.path.dirname(__file__)
+    init_file = os.path.join(here, 'freekey', 'main.py')
+    with open(init_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    m = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", content, re.M)
+    return m.group(1) if m else '0.0.0'
 
 setup(
     name='freekey',
-    version=freekey.__version__,
+    version=get_version(),
     description='Allows limited keyboard use on a locked desktop',
     author='Chris Spencer',
     author_email='chrisspen@gmail.com',
@@ -40,8 +29,10 @@ setup(
         "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    platforms=['Linux'],
-    cmdclass={
-        'install': install
+    entry_points={
+        'console_scripts': [
+            'freekey=freekey.main:main',
+        ],
     },
+    platforms=['Linux']
 )

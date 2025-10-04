@@ -26,7 +26,7 @@ from freekey.pyxhook import HookManager
 
 from freekey.daemon import Daemon
 
-__version__ = '0.1.3'
+__version__ = '0.2.0'
 
 ACTIONS = (
     INSTALL,
